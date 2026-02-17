@@ -11,7 +11,6 @@
       <aside class="sidebar card">
         <div class="sidebar-header">
           <h1>Checklists</h1>
-          <button id="themeToggle" class="ghost-button" title="Toggle theme">🌗</button>
         </div>
 
         <h2>Profiles</h2>
@@ -48,6 +47,41 @@
             </select>
           </label>
         </div>
+
+        <details class="settings card-lite" id="settingsPanel">
+          <summary>Settings</summary>
+          <div class="settings-grid">
+            <label class="switch-row">
+              <input id="themeToggle" type="checkbox" />
+              Dark theme
+            </label>
+
+            <label class="switch-row">
+              <input id="compactToggle" type="checkbox" />
+              Compact rows
+            </label>
+
+            <label class="field-label">
+              Accent color
+              <input id="accentColorInput" type="color" />
+            </label>
+
+            <label class="field-label">
+              Corner roundness
+              <input id="radiusInput" type="range" min="6" max="18" step="1" />
+            </label>
+
+            <label class="switch-row">
+              <input id="autoArchiveToggle" type="checkbox" />
+              Auto-archive completed parent tasks
+            </label>
+
+            <label class="field-label">
+              Auto-archive delay (days)
+              <input id="autoArchiveDaysInput" type="number" min="1" max="180" />
+            </label>
+          </div>
+        </details>
       </aside>
 
       <main class="main card">
@@ -57,8 +91,8 @@
             <p id="profileSummary"></p>
           </div>
           <div class="header-actions">
-            <button id="expandAllBtn" class="ghost-button">Expand all</button>
-            <button id="collapseAllBtn" class="ghost-button">Collapse all</button>
+            <button id="toggleNestedBtn" class="ghost-button">Expand subtasks</button>
+            <button id="toggleDetailsBtn" class="ghost-button">Show details</button>
           </div>
         </header>
 
@@ -75,6 +109,11 @@
         </form>
 
         <section id="taskList" class="task-list"></section>
+
+        <section class="archived-section">
+          <h3>Archived tasks</h3>
+          <div id="archivedList" class="task-list"></div>
+        </section>
       </main>
     </div>
 
@@ -90,8 +129,7 @@
           <div class="task-quick-meta"></div>
         </div>
 
-        <details class="task-details">
-          <summary>Details</summary>
+        <div class="task-details-panel">
           <div class="details-grid">
             <label>
               Due date
@@ -115,11 +153,25 @@
             <button class="ghost-button hide-once-btn" type="button">Hide once</button>
             <button class="ghost-button cancel-once-btn" type="button">Cancel once</button>
             <button class="ghost-button add-subtask-btn" type="button">+ Subtask</button>
+            <button class="ghost-button archive-task-btn" type="button">Archive</button>
             <button class="ghost-button delete-task-btn" type="button">Delete</button>
           </div>
-        </details>
+        </div>
 
         <section class="subtasks"></section>
+      </article>
+    </template>
+
+    <template id="archivedTaskTemplate">
+      <article class="task-item archived-item">
+        <div class="task-main-row">
+          <div class="task-left"><strong class="archived-title"></strong></div>
+          <div class="task-quick-meta archived-meta"></div>
+        </div>
+        <div class="details-actions">
+          <button class="ghost-button restore-task-btn" type="button">Restore</button>
+          <button class="ghost-button delete-archived-btn" type="button">Delete forever</button>
+        </div>
       </article>
     </template>
 

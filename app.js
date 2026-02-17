@@ -1,11 +1,20 @@
 const STORAGE_KEY = 'checklist-app-state-v1';
 
 const defaultState = {
-  theme: 'light',
   hideCompleted: false,
   search: '',
   sort: 'manual',
   activeProfileId: 'personal',
+  ui: {
+    theme: 'light',
+    compact: false,
+    accentColor: '#2563eb',
+    radius: 10,
+    showAllDetails: false,
+    expandAllNested: false,
+    autoArchiveEnabled: true,
+    autoArchiveDays: 7,
+  },
   profiles: [
     {
       id: 'personal',
@@ -17,10 +26,12 @@ const defaultState = {
           title: 'Plan weekend errands',
           notes: 'Capture why this is priority now.',
           completed: false,
+          completedAt: null,
           dueDate: '',
           recurrence: 'none',
           collapsed: false,
           detailsOpen: false,
+          archivedAt: null,
           completedPeriods: [],
           hiddenPeriods: [],
           canceledPeriods: [],
@@ -30,10 +41,12 @@ const defaultState = {
               title: 'Buy groceries',
               notes: '',
               completed: false,
+              completedAt: null,
               dueDate: '',
               recurrence: 'weekly',
               collapsed: false,
               detailsOpen: false,
+              archivedAt: null,
               completedPeriods: [],
               hiddenPeriods: [],
               canceledPeriods: [],
@@ -42,9 +55,10 @@ const defaultState = {
           ],
         },
       ],
+      archivedTasks: [],
     },
-    { id: 'work', name: 'Work', parentProfileId: null, tasks: [] },
-    { id: 'work-project-alpha', name: 'Project Alpha', parentProfileId: 'work', tasks: [] },
+    { id: 'work', name: 'Work', parentProfileId: null, tasks: [], archivedTasks: [] },
+    { id: 'work-project-alpha', name: 'Project Alpha', parentProfileId: 'work', tasks: [], archivedTasks: [] },
   ],
 };
 
@@ -64,10 +78,17 @@ const el = {
   newTaskDueDate: document.querySelector('#newTaskDueDate'),
   newTaskRecurrence: document.querySelector('#newTaskRecurrence'),
   taskList: document.querySelector('#taskList'),
+  archivedList: document.querySelector('#archivedList'),
   taskTemplate: document.querySelector('#taskTemplate'),
-  expandAllBtn: document.querySelector('#expandAllBtn'),
-  collapseAllBtn: document.querySelector('#collapseAllBtn'),
+  archivedTaskTemplate: document.querySelector('#archivedTaskTemplate'),
+  toggleNestedBtn: document.querySelector('#toggleNestedBtn'),
+  toggleDetailsBtn: document.querySelector('#toggleDetailsBtn'),
   themeToggle: document.querySelector('#themeToggle'),
+  compactToggle: document.querySelector('#compactToggle'),
+  accentColorInput: document.querySelector('#accentColorInput'),
+  radiusInput: document.querySelector('#radiusInput'),
+  autoArchiveToggle: document.querySelector('#autoArchiveToggle'),
+  autoArchiveDaysInput: document.querySelector('#autoArchiveDaysInput'),
 };
 
 bindEvents();
@@ -84,11 +105,15 @@ function loadState() {
 }
 
 function normalizeState(nextState) {
+  nextState.ui = { ...structuredClone(defaultState.ui), ...(nextState.ui || {}) };
   nextState.profiles = nextState.profiles || [];
+
   nextState.profiles.forEach((profile) => {
     profile.parentProfileId ??= null;
     profile.tasks = profile.tasks || [];
+    profile.archivedTasks = profile.archivedTasks || [];
     profile.tasks.forEach((task) => normalizeTask(task));
+    profile.archivedTasks.forEach((task) => normalizeTask(task));
   });
 
   if (!nextState.profiles.find((profile) => profile.id === nextState.activeProfileId) && nextState.profiles[0]) {
@@ -104,7 +129,10 @@ function normalizeTask(task) {
   task.completedPeriods ||= [];
   task.hiddenPeriods ||= [];
   task.canceledPeriods ||= [];
+  task.completedAt ??= null;
+  task.archivedAt ??= null;
   task.detailsOpen = Boolean(task.detailsOpen);
+  task.collapsed = Boolean(task.collapsed);
   task.subtasks ||= [];
   task.subtasks.forEach((subtask) => normalizeTask(subtask));
 }
@@ -123,7 +151,7 @@ function bindEvents() {
     if (state.profiles.some((profile) => profile.id === id)) return;
 
     const parentProfileId = el.newProfileParentSelect.value || null;
-    state.profiles.push({ id, name, parentProfileId, tasks: [] });
+    state.profiles.push({ id, name, parentProfileId, tasks: [], archivedTasks: [] });
     state.activeProfileId = id;
 
     el.newProfileInput.value = '';
@@ -158,38 +186,111 @@ function bindEvents() {
     persistAndRender();
   });
 
-  el.expandAllBtn.addEventListener('click', () => {
+  el.toggleNestedBtn.addEventListener('click', () => {
+    state.ui.expandAllNested = !state.ui.expandAllNested;
     visitTasks(activeProfile().tasks, (task) => {
-      task.collapsed = false;
-      task.detailsOpen = true;
+      task.collapsed = !state.ui.expandAllNested;
     });
     persistAndRender();
   });
 
-  el.collapseAllBtn.addEventListener('click', () => {
+  el.toggleDetailsBtn.addEventListener('click', () => {
+    state.ui.showAllDetails = !state.ui.showAllDetails;
     visitTasks(activeProfile().tasks, (task) => {
-      task.collapsed = true;
-      task.detailsOpen = false;
+      task.detailsOpen = state.ui.showAllDetails;
     });
     persistAndRender();
   });
 
-  el.themeToggle.addEventListener('click', () => {
-    state.theme = state.theme === 'dark' ? 'light' : 'dark';
+  el.themeToggle.addEventListener('change', () => {
+    state.ui.theme = el.themeToggle.checked ? 'dark' : 'light';
+    persistAndRender();
+  });
+
+  el.compactToggle.addEventListener('change', () => {
+    state.ui.compact = el.compactToggle.checked;
+    persistAndRender();
+  });
+
+  el.accentColorInput.addEventListener('input', () => {
+    state.ui.accentColor = el.accentColorInput.value;
+    persistAndRender();
+  });
+
+  el.radiusInput.addEventListener('input', () => {
+    state.ui.radius = Number(el.radiusInput.value);
+    persistAndRender();
+  });
+
+  el.autoArchiveToggle.addEventListener('change', () => {
+    state.ui.autoArchiveEnabled = el.autoArchiveToggle.checked;
+    persistAndRender();
+  });
+
+  el.autoArchiveDaysInput.addEventListener('change', () => {
+    const days = clampNumber(Number(el.autoArchiveDaysInput.value), 1, 180, 7);
+    state.ui.autoArchiveDays = days;
     persistAndRender();
   });
 }
 
 function render() {
-  document.body.classList.toggle('dark', state.theme === 'dark');
+  applyUiVariables();
+  maybeAutoArchiveCompletedParents();
+
   el.hideCompletedToggle.checked = state.hideCompleted;
   el.searchInput.value = state.search;
   el.sortSelect.value = state.sort;
+
+  el.themeToggle.checked = state.ui.theme === 'dark';
+  el.compactToggle.checked = state.ui.compact;
+  el.accentColorInput.value = state.ui.accentColor;
+  el.radiusInput.value = String(state.ui.radius);
+  el.autoArchiveToggle.checked = state.ui.autoArchiveEnabled;
+  el.autoArchiveDaysInput.value = String(state.ui.autoArchiveDays);
+
+  el.toggleNestedBtn.textContent = state.ui.expandAllNested ? 'Hide subtasks' : 'Expand subtasks';
+  el.toggleDetailsBtn.textContent = state.ui.showAllDetails ? 'Hide details' : 'Show details';
 
   renderProfiles();
   renderProfileParentOptions();
   renderHeader();
   renderTasks();
+  renderArchivedTasks();
+}
+
+function applyUiVariables() {
+  document.body.classList.toggle('dark', state.ui.theme === 'dark');
+  document.body.classList.toggle('compact', state.ui.compact);
+  document.documentElement.style.setProperty('--accent', state.ui.accentColor);
+  document.documentElement.style.setProperty('--radius', `${state.ui.radius}px`);
+}
+
+function maybeAutoArchiveCompletedParents() {
+  if (!state.ui.autoArchiveEnabled) return;
+  const cutoffMs = Date.now() - state.ui.autoArchiveDays * 86400000;
+
+  state.profiles.forEach((profile) => {
+    autoArchiveInTree(profile.tasks, profile.archivedTasks, cutoffMs);
+  });
+}
+
+function autoArchiveInTree(tasks, archiveBucket, cutoffMs) {
+  for (let index = tasks.length - 1; index >= 0; index -= 1) {
+    const task = tasks[index];
+
+    autoArchiveInTree(task.subtasks, archiveBucket, cutoffMs);
+
+    const isEligible = task.recurrence === 'none' && task.subtasks.length > 0 && task.completed && task.completedAt;
+    if (!isEligible) continue;
+
+    const completedAt = Date.parse(task.completedAt);
+    if (Number.isNaN(completedAt) || completedAt > cutoffMs) continue;
+
+    task.archivedAt = new Date().toISOString();
+    archiveBucket.unshift(task);
+    tasks.splice(index, 1);
+  }
 }
 
 function renderProfiles() {
@@ -236,8 +337,8 @@ function renderHeader() {
   const profile = activeProfile();
   const completed = countCompleted(profile.tasks);
   const total = countCurrentTasks(profile.tasks);
-
   const lineage = profileLineage(profile).map((item) => item.name).join(' / ');
+
   el.activeProfileTitle.textContent = lineage;
   el.profileSummary.textContent = `${completed}/${total} done • ${Math.round((completed / Math.max(total, 1)) * 100)}% complete`;
 }
@@ -261,13 +362,14 @@ function renderTask(task, parentElement, siblingArray, depth) {
   const checkbox = node.querySelector('.task-checkbox');
   const titleInput = node.querySelector('.task-title-input');
   const quickMeta = node.querySelector('.task-quick-meta');
-  const details = node.querySelector('.task-details');
+  const detailsPanel = node.querySelector('.task-details-panel');
   const dueInput = node.querySelector('.task-due-input');
   const recurrenceSelect = node.querySelector('.task-recurrence-select');
   const notesInput = node.querySelector('.task-notes-input');
   const addSubtaskBtn = node.querySelector('.add-subtask-btn');
   const hideOnceBtn = node.querySelector('.hide-once-btn');
   const cancelOnceBtn = node.querySelector('.cancel-once-btn');
+  const archiveTaskBtn = node.querySelector('.archive-task-btn');
   const deleteTaskBtn = node.querySelector('.delete-task-btn');
   const subtaskChip = node.querySelector('.subtask-chip');
   const subtasksEl = node.querySelector('.subtasks');
@@ -278,10 +380,9 @@ function renderTask(task, parentElement, siblingArray, depth) {
   dueInput.value = task.dueDate || '';
   recurrenceSelect.value = task.recurrence;
   notesInput.value = task.notes;
-  details.open = task.detailsOpen;
 
   subtaskChip.classList.toggle('is-hidden', depth === 0);
-
+  detailsPanel.classList.toggle('open', task.detailsOpen);
   quickMeta.innerHTML = quickMetaContent(task);
 
   expander.textContent = task.collapsed ? '▸' : '▾';
@@ -299,11 +400,6 @@ function renderTask(task, parentElement, siblingArray, depth) {
   titleInput.addEventListener('change', () => {
     task.title = titleInput.value.trim() || task.title;
     persistAndRender();
-  });
-
-  details.addEventListener('toggle', () => {
-    task.detailsOpen = details.open;
-    saveState();
   });
 
   dueInput.addEventListener('change', () => {
@@ -331,8 +427,7 @@ function renderTask(task, parentElement, siblingArray, depth) {
     const start = notesInput.selectionStart;
     const end = notesInput.selectionEnd;
     const value = notesInput.value;
-    notesInput.value = `${value.slice(0, start)}
-- ${value.slice(end)}`;
+    notesInput.value = `${value.slice(0, start)}\n- ${value.slice(end)}`;
     const cursor = start + 3;
     notesInput.setSelectionRange(cursor, cursor);
   });
@@ -365,9 +460,28 @@ function renderTask(task, parentElement, siblingArray, depth) {
     persistAndRender();
   });
 
+  archiveTaskBtn.addEventListener('click', () => {
+    archiveTaskByIndex(siblingArray, siblingArray.findIndex((candidate) => candidate.id === task.id), activeProfile().archivedTasks);
+    persistAndRender();
+  });
+
   deleteTaskBtn.addEventListener('click', () => {
     const index = siblingArray.findIndex((candidate) => candidate.id === task.id);
     if (index >= 0) siblingArray.splice(index, 1);
+    persistAndRender();
+  });
+
+  detailsPanel.addEventListener('click', (event) => {
+    const target = event.target;
+    if (!(target instanceof HTMLElement)) return;
+    if (target.closest('.details-grid') || target.closest('.details-actions')) {
+      task.detailsOpen = true;
+      saveState();
+    }
+  });
+
+  quickMeta.addEventListener('click', () => {
+    task.detailsOpen = !task.detailsOpen;
     persistAndRender();
   });
 
@@ -375,12 +489,63 @@ function renderTask(task, parentElement, siblingArray, depth) {
   parentElement.appendChild(node);
 }
 
+function renderArchivedTasks() {
+  const profile = activeProfile();
+  el.archivedList.innerHTML = '';
+
+  if (!profile.archivedTasks.length) {
+    const empty = document.createElement('p');
+    empty.className = 'muted';
+    empty.textContent = 'No archived tasks yet.';
+    el.archivedList.appendChild(empty);
+    return;
+  }
+
+  profile.archivedTasks.forEach((task) => {
+    const node = el.archivedTaskTemplate.content.firstElementChild.cloneNode(true);
+    node.querySelector('.archived-title').textContent = task.title;
+    node.querySelector('.archived-meta').textContent = archivedMeta(task);
+
+    node.querySelector('.restore-task-btn').addEventListener('click', () => {
+      const index = profile.archivedTasks.findIndex((candidate) => candidate.id === task.id);
+      if (index < 0) return;
+      const restored = profile.archivedTasks.splice(index, 1)[0];
+      restored.archivedAt = null;
+      profile.tasks.unshift(restored);
+      persistAndRender();
+    });
+
+    node.querySelector('.delete-archived-btn').addEventListener('click', () => {
+      const index = profile.archivedTasks.findIndex((candidate) => candidate.id === task.id);
+      if (index >= 0) profile.archivedTasks.splice(index, 1);
+      persistAndRender();
+    });
+
+    el.archivedList.appendChild(node);
+  });
+}
+
+function archivedMeta(task) {
+  const bits = [];
+  if (task.archivedAt) bits.push(`Archived ${new Date(task.archivedAt).toLocaleDateString()}`);
+  if (task.completedAt) bits.push(`Completed ${new Date(task.completedAt).toLocaleDateString()}`);
+  return bits.join(' • ');
+}
+
+function archiveTaskByIndex(list, index, archiveBucket) {
+  if (index < 0) return;
+  const task = list.splice(index, 1)[0];
+  task.archivedAt = new Date().toISOString();
+  archiveBucket.unshift(task);
+}
+
 function quickMetaContent(task) {
   const bits = [];
   const due = dueText(task.dueDate);
-  if (due) bits.push(`<span class="${due.className}">${due.label}</span>`);
+  if (due) bits.push(`<span class="${due.className}">📅 ${due.label}</span>`);
   if (task.recurrence !== 'none') bits.push(`<span>↻ ${task.recurrence}</span>`);
   if (task.notes) bits.push('<span>📝 notes</span>');
+  bits.push(`<button type="button" class="link-button">${task.detailsOpen ? 'Hide details' : 'Show details'}</button>`);
   return bits.join(' • ');
 }
 
@@ -400,6 +565,7 @@ function dueText(rawDate) {
 function setCompletedWithChildren(task, completed) {
   if (task.recurrence === 'none') {
     task.completed = completed;
+    task.completedAt = completed ? new Date().toISOString() : null;
   } else {
     markTaskPeriod(task, completed ? 'completed' : 'active');
   }
@@ -408,6 +574,7 @@ function setCompletedWithChildren(task, completed) {
 
 function resetTaskPeriodData(task) {
   task.completed = false;
+  task.completedAt = null;
   task.completedPeriods = [];
   task.hiddenPeriods = [];
   task.canceledPeriods = [];
@@ -481,10 +648,12 @@ function newTask(title, dueDate = '', recurrence = 'none') {
     title,
     notes: '',
     completed: false,
+    completedAt: null,
     dueDate,
     recurrence,
-    collapsed: false,
-    detailsOpen: false,
+    collapsed: !state.ui.expandAllNested,
+    detailsOpen: state.ui.showAllDetails,
+    archivedAt: null,
     completedPeriods: [],
     hiddenPeriods: [],
     canceledPeriods: [],
@@ -531,6 +700,11 @@ function visitTasks(tasks, callback) {
     callback(task);
     visitTasks(task.subtasks, callback);
   });
+}
+
+function clampNumber(value, min, max, fallback) {
+  if (Number.isNaN(value)) return fallback;
+  return Math.min(max, Math.max(min, value));
 }
 
 function persistAndRender() {
