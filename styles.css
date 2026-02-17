@@ -1,0 +1,272 @@
+:root {
+  --bg: #f6f7fb;
+  --card: #ffffff;
+  --text: #111827;
+  --muted: #6b7280;
+  --border: #e5e7eb;
+  --accent: #2563eb;
+  --success: #16a34a;
+  --overdue: #dc2626;
+  --subtask-bg: #f8fafc;
+  --radius: 10px;
+}
+
+body.dark {
+  --bg: #0f172a;
+  --card: #111827;
+  --text: #e5e7eb;
+  --muted: #94a3b8;
+  --border: #334155;
+  --success: #4ade80;
+  --overdue: #f87171;
+  --subtask-bg: #0b1221;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: Inter, system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 14px;
+}
+
+.app-shell {
+  max-width: 1220px;
+  margin: 16px auto;
+  padding: 0 14px;
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  gap: 12px;
+}
+
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: calc(var(--radius) + 2px);
+  padding: 12px;
+}
+
+.card-lite {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 8px;
+  background: color-mix(in oklab, var(--card) 92%, var(--accent));
+}
+
+.sidebar-header,
+.main-header,
+.switch-row,
+.task-form,
+.task-main-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sidebar-header,
+.main-header { justify-content: space-between; }
+
+h1,h2,h3,p { margin: 0; }
+h1 { font-size: 1.1rem; }
+h2 { font-size: 1rem; margin-bottom: 8px; }
+h3 { font-size: 0.95rem; margin-bottom: 8px; }
+
+.profiles-list,
+.task-list,
+.subtasks,
+.stack-form,
+.controls,
+.settings-grid { display: grid; gap: 8px; }
+
+.profile-btn {
+  text-align: left;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text);
+  padding: 6px 8px;
+  border-radius: var(--radius);
+  cursor: pointer;
+  font-size: 0.92rem;
+}
+
+.profile-btn.active {
+  border-color: var(--accent);
+  background: color-mix(in oklab, var(--accent) 12%, transparent);
+}
+
+input, button, select, textarea { font: inherit; }
+
+input[type='text'], input[type='search'], input[type='date'], input[type='number'], select, textarea, input[type='color'] {
+  width: 100%;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text);
+  border-radius: var(--radius);
+  padding: 6px 8px;
+}
+
+input[type='color'] { height: 34px; padding: 4px; }
+
+button {
+  border: none;
+  background: var(--accent);
+  color: white;
+  border-radius: var(--radius);
+  padding: 6px 10px;
+  cursor: pointer;
+}
+
+.ghost-button {
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+
+.field-label { font-size: 0.86rem; color: var(--muted); display: grid; gap: 4px; }
+#profileSummary, .muted { color: var(--muted); margin-top: 3px; font-size: 0.9rem; }
+
+.settings summary {
+  cursor: pointer;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.task-form { margin-bottom: 10px; }
+
+.task-item {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 8px;
+}
+
+.task-item.is-subtask {
+  background: var(--subtask-bg);
+  border-left: 3px solid var(--accent);
+}
+
+.task-main-row { justify-content: space-between; }
+
+.task-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+}
+
+.task-title-input {
+  border: none !important;
+  padding: 0 !important;
+  font-weight: 500;
+}
+
+.task-title-input.completed {
+  text-decoration: line-through;
+  color: var(--muted);
+}
+
+.task-expander {
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  background: transparent;
+  color: var(--muted);
+  border: 1px solid var(--border);
+}
+
+.task-expander.expander-hidden { visibility: hidden; }
+
+.task-quick-meta {
+  color: var(--muted);
+  font-size: 0.78rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.link-button {
+  border: none;
+  background: transparent;
+  color: var(--accent);
+  padding: 0;
+  font-size: 0.78rem;
+  text-decoration: underline;
+}
+
+.task-details-panel {
+  margin-top: 6px;
+  border-top: 1px dashed var(--border);
+  padding-top: 6px;
+  display: none;
+}
+
+.task-details-panel.open { display: block; }
+
+.details-grid {
+  display: grid;
+  gap: 6px;
+  grid-template-columns: repeat(2, minmax(140px, 1fr));
+}
+
+.details-grid label {
+  font-size: 0.75rem;
+  color: var(--muted);
+  display: grid;
+  gap: 4px;
+}
+
+.notes-label { grid-column: 1 / -1; }
+textarea { resize: vertical; min-height: 64px; }
+
+.details-actions {
+  margin-top: 6px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.subtasks {
+  margin-left: 14px;
+  margin-top: 6px;
+  border-left: 1px dashed var(--border);
+  padding-left: 8px;
+}
+
+.task-item.collapsed > .subtasks { display: none; }
+
+.subtask-chip {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--accent);
+  border: 1px solid color-mix(in oklab, var(--accent) 40%, var(--border));
+  border-radius: 999px;
+  padding: 1px 6px;
+}
+
+.archived-section {
+  margin-top: 16px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+
+.archived-item { opacity: 0.92; }
+
+.overdue { color: var(--overdue); }
+.due-soon { color: var(--success); }
+.is-hidden { display: none !important; }
+
+body.compact .task-item { padding: 6px; }
+body.compact .task-form input,
+body.compact .task-form select,
+body.compact button { padding-top: 5px; padding-bottom: 5px; }
+
+@media (max-width: 940px) {
+  .app-shell { grid-template-columns: 1fr; }
+  .task-form { flex-direction: column; align-items: stretch; }
+  .task-main-row { align-items: flex-start; flex-direction: column; }
+  .details-grid { grid-template-columns: 1fr; }
+}
