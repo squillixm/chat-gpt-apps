@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Personalized Checklist App</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar card">
+        <div class="sidebar-header">
+          <h1>Checklists</h1>
+          <button id="themeToggle" class="ghost-button" title="Toggle theme">🌗</button>
+        </div>
+
+        <h2>Profiles</h2>
+        <div id="profilesList" class="profiles-list"></div>
+
+        <form id="newProfileForm" class="stack-form">
+          <input id="newProfileInput" type="text" placeholder="Profile or project name" required maxlength="30" />
+          <select id="newProfileParentSelect" aria-label="Parent profile">
+            <option value="">No parent (top-level profile)</option>
+          </select>
+          <button type="submit">Add profile</button>
+        </form>
+
+        <hr />
+
+        <div class="controls">
+          <label class="switch-row">
+            <input id="hideCompletedToggle" type="checkbox" />
+            Hide completed tasks
+          </label>
+
+          <label class="field-label">
+            Search
+            <input id="searchInput" type="search" placeholder="Find tasks or notes..." />
+          </label>
+
+          <label class="field-label">
+            Sort
+            <select id="sortSelect">
+              <option value="manual">Manual</option>
+              <option value="dueSoon">Due soon</option>
+              <option value="dueLate">Due later</option>
+              <option value="alphabetical">A → Z</option>
+            </select>
+          </label>
+        </div>
+      </aside>
+
+      <main class="main card">
+        <header class="main-header">
+          <div>
+            <h2 id="activeProfileTitle">Profile</h2>
+            <p id="profileSummary"></p>
+          </div>
+          <div class="header-actions">
+            <button id="expandAllBtn" class="ghost-button">Expand all</button>
+            <button id="collapseAllBtn" class="ghost-button">Collapse all</button>
+          </div>
+        </header>
+
+        <form id="newTaskForm" class="task-form">
+          <input id="newTaskTitle" type="text" placeholder="Add a task" required maxlength="120" />
+          <input id="newTaskDueDate" type="date" />
+          <select id="newTaskRecurrence" aria-label="Recurrence">
+            <option value="none">No repeat</option>
+            <option value="daily">Daily</option>
+            <option value="weekly">Weekly</option>
+            <option value="monthly">Monthly</option>
+          </select>
+          <button type="submit">Add task</button>
+        </form>
+
+        <section id="taskList" class="task-list"></section>
+      </main>
+    </div>
+
+    <template id="taskTemplate">
+      <article class="task-item">
+        <div class="task-main-row">
+          <div class="task-left">
+            <button class="task-expander" aria-label="Toggle subtasks">▸</button>
+            <input class="task-checkbox" type="checkbox" />
+            <input class="task-title-input" type="text" maxlength="120" />
+            <span class="subtask-chip is-hidden">subtask</span>
+          </div>
+          <div class="task-quick-meta"></div>
+        </div>
+
+        <details class="task-details">
+          <summary>Details</summary>
+          <div class="details-grid">
+            <label>
+              Due date
+              <input class="task-due-input" type="date" />
+            </label>
+            <label>
+              Repeat
+              <select class="task-recurrence-select" aria-label="Task recurrence">
+                <option value="none">No repeat</option>
+                <option value="daily">Daily</option>
+                <option value="weekly">Weekly</option>
+                <option value="monthly">Monthly</option>
+              </select>
+            </label>
+            <label class="notes-label">
+              Notes / questions
+              <textarea class="task-notes-input" rows="3" maxlength="1200" placeholder="Add context, decisions, blockers, questions..."></textarea>
+            </label>
+          </div>
+          <div class="details-actions">
+            <button class="ghost-button hide-once-btn" type="button">Hide once</button>
+            <button class="ghost-button cancel-once-btn" type="button">Cancel once</button>
+            <button class="ghost-button add-subtask-btn" type="button">+ Subtask</button>
+            <button class="ghost-button delete-task-btn" type="button">Delete</button>
+          </div>
+        </details>
+
+        <section class="subtasks"></section>
+      </article>
+    </template>
+
+    <script src="app.js"></script>
+  </body>
+</html>
