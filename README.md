@@ -6,13 +6,14 @@ A lightweight single-page checklist app with profile-based planning, sub-profile
 
 - Nested tasks and subtasks (expand/collapse)
 - Clear visual hierarchy for subtasks
-- Hide completed tasks toggle
+- Header controls for profiles/settings windows, hide-completed toggle, search, and sorting
 - Due dates for newly created tasks and existing tasks
-- Multiple profiles and sub-profiles (e.g. Work → Project Alpha)
+- Multiple profiles and sub-profiles (e.g. Work → Project Alpha) managed in a dedicated Profiles window
 - Recurring tasks (daily, weekly, monthly)
 - Per-occurrence controls for recurring tasks: hide once or cancel once
 - Task notes/questions with automatic bullet-list entry for decisions, context, and blockers
 - Manual task archiving and archived-task restore/delete actions
+- Archived tasks tab separated from active tasks
 - Automatic archiving for completed parent tasks after a configurable number of days
 - Separate controls to expand/collapse nested tasks and show/hide all details panels
 - Visual settings customization (theme, compact mode, accent color, border radius)
