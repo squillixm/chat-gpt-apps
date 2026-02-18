@@ -8,6 +8,16 @@
   </head>
   <body>
     <div class="app-shell">
+      <header class="topbar card">
+        <div class="topbar-main">
+          <h1>Checklists</h1>
+          <div class="sidebar-icons">
+            <button id="openProfilesBtn" class="icon-button" title="Profiles">👥</button>
+            <button id="openSettingsBtn" class="icon-button" title="Settings">⚙️</button>
+          </div>
+        </div>
+
+        <div class="topbar-controls controls-inline">
       <aside class="sidebar card">
         <div class="sidebar-header">
           <h1>Checklists</h1>
@@ -32,11 +42,13 @@
             Hide completed tasks
           </label>
 
+          <label class="field-label inline-field">
           <label class="field-label">
             Search
             <input id="searchInput" type="search" placeholder="Find tasks or notes..." />
           </label>
 
+          <label class="field-label inline-field">
           <label class="field-label">
             Sort
             <select id="sortSelect">
@@ -47,6 +59,7 @@
             </select>
           </label>
         </div>
+      </header>
 
         <details class="settings card-lite" id="settingsPanel">
           <summary>Settings</summary>
@@ -96,6 +109,28 @@
           </div>
         </header>
 
+        <div class="content-tabs" role="tablist" aria-label="Task sections">
+          <button id="activeTabBtn" class="tab-btn active" type="button" role="tab" aria-selected="true">Active tasks</button>
+          <button id="archivedTabBtn" class="tab-btn" type="button" role="tab" aria-selected="false">Archived tasks</button>
+        </div>
+
+        <section id="activePane" class="tab-pane">
+          <form id="newTaskForm" class="task-form">
+            <input id="newTaskTitle" type="text" placeholder="Add a task" required maxlength="120" />
+            <input id="newTaskDueDate" type="date" />
+            <select id="newTaskRecurrence" aria-label="Recurrence">
+              <option value="none">No repeat</option>
+              <option value="daily">Daily</option>
+              <option value="weekly">Weekly</option>
+              <option value="monthly">Monthly</option>
+            </select>
+            <button type="submit">Add task</button>
+          </form>
+
+          <section id="taskList" class="task-list"></section>
+        </section>
+
+        <section id="archivedPane" class="tab-pane is-hidden">
         <form id="newTaskForm" class="task-form">
           <input id="newTaskTitle" type="text" placeholder="Add a task" required maxlength="120" />
           <input id="newTaskDueDate" type="date" />
@@ -116,6 +151,74 @@
         </section>
       </main>
     </div>
+
+    <section id="profilesModal" class="modal hidden" aria-label="Profiles window">
+      <div class="modal-card card">
+        <div class="modal-header">
+          <h2>Profiles</h2>
+          <button id="closeProfilesBtn" class="icon-button" type="button">✕</button>
+        </div>
+
+        <section class="card-lite">
+          <h3>Parent profiles</h3>
+          <div id="parentProfilesList" class="profiles-list"></div>
+          <form id="newParentProfileForm" class="stack-form">
+            <input id="newParentProfileInput" type="text" placeholder="Add parent profile" required maxlength="30" />
+            <button type="submit">Add parent profile</button>
+          </form>
+        </section>
+
+        <section class="card-lite modal-section">
+          <h3 id="projectsHeading">Projects</h3>
+          <div id="childProfilesList" class="profiles-list"></div>
+          <form id="newChildProfileForm" class="stack-form">
+            <input id="newChildProfileInput" type="text" placeholder="Add project under selected parent" required maxlength="30" />
+            <button type="submit">Add project</button>
+          </form>
+        </section>
+      </div>
+    </section>
+
+    <section id="settingsModal" class="modal hidden" aria-label="Settings window">
+      <div class="modal-card card">
+        <div class="modal-header">
+          <h2>Settings</h2>
+          <button id="closeSettingsBtn" class="icon-button" type="button">✕</button>
+        </div>
+
+        <div class="settings-grid">
+          <label class="switch-row">
+            <input id="themeToggle" type="checkbox" />
+            Dark theme
+          </label>
+
+          <label class="switch-row">
+            <input id="compactToggle" type="checkbox" />
+            Compact rows
+          </label>
+
+          <label class="field-label">
+            Accent color
+            <input id="accentColorInput" type="color" />
+          </label>
+
+          <label class="field-label">
+            Corner roundness
+            <input id="radiusInput" type="range" min="6" max="18" step="1" />
+          </label>
+
+          <label class="switch-row">
+            <input id="autoArchiveToggle" type="checkbox" />
+            Auto-archive completed parent tasks
+          </label>
+
+          <label class="field-label">
+            Auto-archive delay (days)
+            <input id="autoArchiveDaysInput" type="number" min="1" max="180" />
+          </label>
+        </div>
+      </div>
+    </section>
 
     <template id="taskTemplate">
       <article class="task-item">
