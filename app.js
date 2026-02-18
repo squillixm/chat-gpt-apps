@@ -65,6 +65,10 @@ const defaultState = {
 
 let state = normalizeState(loadState());
 const el = {
+  profilesList: document.querySelector('#profilesList'),
+  newProfileForm: document.querySelector('#newProfileForm'),
+  newProfileInput: document.querySelector('#newProfileInput'),
+  newProfileParentSelect: document.querySelector('#newProfileParentSelect'),
   activeProfileTitle: document.querySelector('#activeProfileTitle'),
   profileSummary: document.querySelector('#profileSummary'),
   hideCompletedToggle: document.querySelector('#hideCompletedToggle'),
@@ -181,6 +185,20 @@ function bindEvents() {
     state.activeProfileId = id;
 
     el.newChildProfileInput.value = '';
+  el.newProfileForm.addEventListener('submit', (event) => {
+    event.preventDefault();
+    const name = el.newProfileInput.value.trim();
+    if (!name) return;
+
+    const id = slugify(name) || crypto.randomUUID();
+    if (state.profiles.some((profile) => profile.id === id)) return;
+
+    const parentProfileId = el.newProfileParentSelect.value || null;
+    state.profiles.push({ id, name, parentProfileId, tasks: [], archivedTasks: [] });
+    state.activeProfileId = id;
+
+    el.newProfileInput.value = '';
+    el.newProfileParentSelect.value = '';
     persistAndRender();
   });
 
@@ -395,6 +413,18 @@ function renderParentProfileRow(profile, isSelectedParent) {
 function renderProjectRow(profile) {
   const row = profileRowShell();
   const button = profileButton(profile, profile.id === state.activeProfileId, `(${countCurrentTasks(profile.tasks)})`);
+  el.profilesList.innerHTML = '';
+  const roots = state.profiles.filter((profile) => !profile.parentProfileId);
+  roots.forEach((profile) => renderProfileButton(profile, 0));
+}
+
+function renderProfileButton(profile, depth) {
+  const button = document.createElement('button');
+  button.className = `profile-btn ${profile.id === state.activeProfileId ? 'active' : ''}`;
+  button.style.paddingLeft = `${10 + depth * 14}px`;
+
+  const prefix = depth > 0 ? '↳ ' : '';
+  button.textContent = `${prefix}${profile.name} (${countCurrentTasks(profile.tasks)})`;
   button.addEventListener('click', () => {
     state.activeProfileId = profile.id;
     persistAndRender();

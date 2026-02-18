@@ -18,17 +18,38 @@
         </div>
 
         <div class="topbar-controls controls-inline">
+      <aside class="sidebar card">
+        <div class="sidebar-header">
+          <h1>Checklists</h1>
+        </div>
+
+        <h2>Profiles</h2>
+        <div id="profilesList" class="profiles-list"></div>
+
+        <form id="newProfileForm" class="stack-form">
+          <input id="newProfileInput" type="text" placeholder="Profile or project name" required maxlength="30" />
+          <select id="newProfileParentSelect" aria-label="Parent profile">
+            <option value="">No parent (top-level profile)</option>
+          </select>
+          <button type="submit">Add profile</button>
+        </form>
+
+        <hr />
+
+        <div class="controls">
           <label class="switch-row">
             <input id="hideCompletedToggle" type="checkbox" />
             Hide completed tasks
           </label>
 
           <label class="field-label inline-field">
+          <label class="field-label">
             Search
             <input id="searchInput" type="search" placeholder="Find tasks or notes..." />
           </label>
 
           <label class="field-label inline-field">
+          <label class="field-label">
             Sort
             <select id="sortSelect">
               <option value="manual">Manual</option>
@@ -39,6 +60,42 @@
           </label>
         </div>
       </header>
+
+        <details class="settings card-lite" id="settingsPanel">
+          <summary>Settings</summary>
+          <div class="settings-grid">
+            <label class="switch-row">
+              <input id="themeToggle" type="checkbox" />
+              Dark theme
+            </label>
+
+            <label class="switch-row">
+              <input id="compactToggle" type="checkbox" />
+              Compact rows
+            </label>
+
+            <label class="field-label">
+              Accent color
+              <input id="accentColorInput" type="color" />
+            </label>
+
+            <label class="field-label">
+              Corner roundness
+              <input id="radiusInput" type="range" min="6" max="18" step="1" />
+            </label>
+
+            <label class="switch-row">
+              <input id="autoArchiveToggle" type="checkbox" />
+              Auto-archive completed parent tasks
+            </label>
+
+            <label class="field-label">
+              Auto-archive delay (days)
+              <input id="autoArchiveDaysInput" type="number" min="1" max="180" />
+            </label>
+          </div>
+        </details>
+      </aside>
 
       <main class="main card">
         <header class="main-header">
@@ -74,6 +131,22 @@
         </section>
 
         <section id="archivedPane" class="tab-pane is-hidden">
+        <form id="newTaskForm" class="task-form">
+          <input id="newTaskTitle" type="text" placeholder="Add a task" required maxlength="120" />
+          <input id="newTaskDueDate" type="date" />
+          <select id="newTaskRecurrence" aria-label="Recurrence">
+            <option value="none">No repeat</option>
+            <option value="daily">Daily</option>
+            <option value="weekly">Weekly</option>
+            <option value="monthly">Monthly</option>
+          </select>
+          <button type="submit">Add task</button>
+        </form>
+
+        <section id="taskList" class="task-list"></section>
+
+        <section class="archived-section">
+          <h3>Archived tasks</h3>
           <div id="archivedList" class="task-list"></div>
         </section>
       </main>
