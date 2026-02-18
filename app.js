@@ -5,10 +5,11 @@ const defaultState = {
   search: '',
   sort: 'manual',
   activeProfileId: 'personal',
+  activePane: 'active',
   ui: {
     theme: 'light',
     compact: false,
-    accentColor: '#2563eb',
+    accentColor: '#3d8bef',
     radius: 10,
     showAllDetails: false,
     expandAllNested: false,
@@ -64,10 +65,6 @@ const defaultState = {
 
 let state = normalizeState(loadState());
 const el = {
-  profilesList: document.querySelector('#profilesList'),
-  newProfileForm: document.querySelector('#newProfileForm'),
-  newProfileInput: document.querySelector('#newProfileInput'),
-  newProfileParentSelect: document.querySelector('#newProfileParentSelect'),
   activeProfileTitle: document.querySelector('#activeProfileTitle'),
   profileSummary: document.querySelector('#profileSummary'),
   hideCompletedToggle: document.querySelector('#hideCompletedToggle'),
@@ -83,6 +80,23 @@ const el = {
   archivedTaskTemplate: document.querySelector('#archivedTaskTemplate'),
   toggleNestedBtn: document.querySelector('#toggleNestedBtn'),
   toggleDetailsBtn: document.querySelector('#toggleDetailsBtn'),
+  activeTabBtn: document.querySelector('#activeTabBtn'),
+  archivedTabBtn: document.querySelector('#archivedTabBtn'),
+  activePane: document.querySelector('#activePane'),
+  archivedPane: document.querySelector('#archivedPane'),
+  openProfilesBtn: document.querySelector('#openProfilesBtn'),
+  closeProfilesBtn: document.querySelector('#closeProfilesBtn'),
+  profilesModal: document.querySelector('#profilesModal'),
+  parentProfilesList: document.querySelector('#parentProfilesList'),
+  childProfilesList: document.querySelector('#childProfilesList'),
+  projectsHeading: document.querySelector('#projectsHeading'),
+  newParentProfileForm: document.querySelector('#newParentProfileForm'),
+  newParentProfileInput: document.querySelector('#newParentProfileInput'),
+  newChildProfileForm: document.querySelector('#newChildProfileForm'),
+  newChildProfileInput: document.querySelector('#newChildProfileInput'),
+  openSettingsBtn: document.querySelector('#openSettingsBtn'),
+  closeSettingsBtn: document.querySelector('#closeSettingsBtn'),
+  settingsModal: document.querySelector('#settingsModal'),
   themeToggle: document.querySelector('#themeToggle'),
   compactToggle: document.querySelector('#compactToggle'),
   accentColorInput: document.querySelector('#accentColorInput'),
@@ -107,6 +121,7 @@ function loadState() {
 function normalizeState(nextState) {
   nextState.ui = { ...structuredClone(defaultState.ui), ...(nextState.ui || {}) };
   nextState.profiles = nextState.profiles || [];
+  nextState.activePane = nextState.activePane === 'archived' ? 'archived' : 'active';
 
   nextState.profiles.forEach((profile) => {
     profile.parentProfileId ??= null;
@@ -142,20 +157,30 @@ function saveState() {
 }
 
 function bindEvents() {
-  el.newProfileForm.addEventListener('submit', (event) => {
+  el.newParentProfileForm.addEventListener('submit', (event) => {
     event.preventDefault();
-    const name = el.newProfileInput.value.trim();
+    const name = el.newParentProfileInput.value.trim();
     if (!name) return;
 
-    const id = slugify(name) || crypto.randomUUID();
-    if (state.profiles.some((profile) => profile.id === id)) return;
-
-    const parentProfileId = el.newProfileParentSelect.value || null;
-    state.profiles.push({ id, name, parentProfileId, tasks: [], archivedTasks: [] });
+    const id = uniqueProfileId(name);
+    state.profiles.push({ id, name, parentProfileId: null, tasks: [], archivedTasks: [] });
     state.activeProfileId = id;
 
-    el.newProfileInput.value = '';
-    el.newProfileParentSelect.value = '';
+    el.newParentProfileInput.value = '';
+    persistAndRender();
+  });
+
+  el.newChildProfileForm.addEventListener('submit', (event) => {
+    event.preventDefault();
+    const name = el.newChildProfileInput.value.trim();
+    if (!name) return;
+
+    const parent = selectedParentProfile();
+    const id = uniqueProfileId(`${parent.id}-${name}`);
+    state.profiles.push({ id, name, parentProfileId: parent.id, tasks: [], archivedTasks: [] });
+    state.activeProfileId = id;
+
+    el.newChildProfileInput.value = '';
     persistAndRender();
   });
 
@@ -200,6 +225,40 @@ function bindEvents() {
       task.detailsOpen = state.ui.showAllDetails;
     });
     persistAndRender();
+  });
+
+  el.activeTabBtn.addEventListener('click', () => {
+    state.activePane = 'active';
+    persistAndRender();
+  });
+
+  el.archivedTabBtn.addEventListener('click', () => {
+    state.activePane = 'archived';
+    persistAndRender();
+  });
+
+  el.openProfilesBtn.addEventListener('click', () => {
+    el.settingsModal.classList.add('hidden');
+    el.profilesModal.classList.remove('hidden');
+  });
+
+  el.closeProfilesBtn.addEventListener('click', () => {
+    el.profilesModal.classList.add('hidden');
+  });
+
+  el.openSettingsBtn.addEventListener('click', () => {
+    el.profilesModal.classList.add('hidden');
+    el.settingsModal.classList.remove('hidden');
+  });
+
+  el.closeSettingsBtn.addEventListener('click', () => {
+    el.settingsModal.classList.add('hidden');
+  });
+
+  [el.profilesModal, el.settingsModal].forEach((modal) => {
+    modal.addEventListener('click', (event) => {
+      if (event.target === modal) modal.classList.add('hidden');
+    });
   });
 
   el.themeToggle.addEventListener('change', () => {
@@ -252,8 +311,14 @@ function render() {
   el.toggleNestedBtn.textContent = state.ui.expandAllNested ? 'Hide subtasks' : 'Expand subtasks';
   el.toggleDetailsBtn.textContent = state.ui.showAllDetails ? 'Hide details' : 'Show details';
 
+  el.activeTabBtn.classList.toggle('active', state.activePane === 'active');
+  el.archivedTabBtn.classList.toggle('active', state.activePane === 'archived');
+  el.activeTabBtn.setAttribute('aria-selected', state.activePane === 'active' ? 'true' : 'false');
+  el.archivedTabBtn.setAttribute('aria-selected', state.activePane === 'archived' ? 'true' : 'false');
+  el.activePane.classList.toggle('is-hidden', state.activePane !== 'active');
+  el.archivedPane.classList.toggle('is-hidden', state.activePane !== 'archived');
+
   renderProfiles();
-  renderProfileParentOptions();
   renderHeader();
   renderTasks();
   renderArchivedTasks();
@@ -294,43 +359,75 @@ function autoArchiveInTree(tasks, archiveBucket, cutoffMs) {
 }
 
 function renderProfiles() {
-  el.profilesList.innerHTML = '';
+  el.parentProfilesList.innerHTML = '';
+  el.childProfilesList.innerHTML = '';
+
   const roots = state.profiles.filter((profile) => !profile.parentProfileId);
-  roots.forEach((profile) => renderProfileButton(profile, 0));
+  const selectedParent = selectedParentProfile();
+  el.projectsHeading.textContent = `Projects for ${selectedParent.name}`;
+
+  roots.forEach((profile) => renderParentProfileRow(profile, profile.id === selectedParent.id));
+
+  const children = state.profiles.filter((profile) => profile.parentProfileId === selectedParent.id);
+  if (!children.length) {
+    const empty = document.createElement('p');
+    empty.className = 'muted';
+    empty.textContent = 'No projects yet for this parent profile.';
+    el.childProfilesList.appendChild(empty);
+    return;
+  }
+
+  children.forEach((profile) => renderProjectRow(profile));
 }
 
-function renderProfileButton(profile, depth) {
-  const button = document.createElement('button');
-  button.className = `profile-btn ${profile.id === state.activeProfileId ? 'active' : ''}`;
-  button.style.paddingLeft = `${10 + depth * 14}px`;
-
-  const prefix = depth > 0 ? '↳ ' : '';
-  button.textContent = `${prefix}${profile.name} (${countCurrentTasks(profile.tasks)})`;
+function renderParentProfileRow(profile, isSelectedParent) {
+  const row = profileRowShell();
+  const button = profileButton(profile, isSelectedParent, `(${countCurrentTasks(profile.tasks)})`);
   button.addEventListener('click', () => {
     state.activeProfileId = profile.id;
     persistAndRender();
   });
 
-  el.profilesList.appendChild(button);
-
-  const children = state.profiles.filter((candidate) => candidate.parentProfileId === profile.id);
-  children.forEach((child) => renderProfileButton(child, depth + 1));
+  row.append(button, deleteProfileButton(profile));
+  el.parentProfilesList.appendChild(row);
 }
 
-function renderProfileParentOptions() {
-  const previousValue = el.newProfileParentSelect.value;
-  el.newProfileParentSelect.innerHTML = '<option value="">No parent (top-level profile)</option>';
-
-  state.profiles.forEach((profile) => {
-    const option = document.createElement('option');
-    option.value = profile.id;
-    option.textContent = profile.name;
-    el.newProfileParentSelect.appendChild(option);
+function renderProjectRow(profile) {
+  const row = profileRowShell();
+  const button = profileButton(profile, profile.id === state.activeProfileId, `(${countCurrentTasks(profile.tasks)})`);
+  button.addEventListener('click', () => {
+    state.activeProfileId = profile.id;
+    persistAndRender();
   });
 
-  if ([...el.newProfileParentSelect.options].some((option) => option.value === previousValue)) {
-    el.newProfileParentSelect.value = previousValue;
-  }
+  row.append(button, deleteProfileButton(profile));
+  el.childProfilesList.appendChild(row);
+}
+
+function profileRowShell() {
+  const row = document.createElement('div');
+  row.className = 'profile-row';
+  return row;
+}
+
+function profileButton(profile, isActive, suffix = '') {
+  const button = document.createElement('button');
+  button.className = `profile-btn ${isActive ? 'active' : ''}`;
+  button.textContent = `${profile.name} ${suffix}`.trim();
+  return button;
+}
+
+function deleteProfileButton(profile) {
+  const button = document.createElement('button');
+  button.className = 'ghost-button profile-delete-btn';
+  button.type = 'button';
+  button.textContent = 'Delete';
+
+  button.addEventListener('click', () => {
+    removeProfile(profile.id);
+  });
+
+  return button;
 }
 
 function renderHeader() {
@@ -461,7 +558,8 @@ function renderTask(task, parentElement, siblingArray, depth) {
   });
 
   archiveTaskBtn.addEventListener('click', () => {
-    archiveTaskByIndex(siblingArray, siblingArray.findIndex((candidate) => candidate.id === task.id), activeProfile().archivedTasks);
+    const index = siblingArray.findIndex((candidate) => candidate.id === task.id);
+    archiveTaskByIndex(siblingArray, index, activeProfile().archivedTasks);
     persistAndRender();
   });
 
@@ -665,6 +763,63 @@ function activeProfile() {
   return state.profiles.find((profile) => profile.id === state.activeProfileId) || state.profiles[0];
 }
 
+function selectedParentProfile() {
+  const profile = activeProfile();
+  if (!profile.parentProfileId) return profile;
+  return state.profiles.find((candidate) => candidate.id === profile.parentProfileId) || state.profiles[0];
+}
+
+function uniqueProfileId(name) {
+  const base = slugify(name) || crypto.randomUUID();
+  if (!state.profiles.some((profile) => profile.id === base)) return base;
+
+  let n = 2;
+  while (state.profiles.some((profile) => profile.id === `${base}-${n}`)) n += 1;
+  return `${base}-${n}`;
+}
+
+function removeProfile(profileId) {
+  const profile = state.profiles.find((candidate) => candidate.id === profileId);
+  if (!profile) return;
+
+  const isParent = !profile.parentProfileId;
+  const totalParents = state.profiles.filter((candidate) => !candidate.parentProfileId).length;
+  if (isParent && totalParents <= 1) {
+    alert('You need at least one parent profile.');
+    return;
+  }
+
+  const profilesToDelete = collectProfileIds(profileId);
+  const includesActive = profilesToDelete.includes(state.activeProfileId);
+
+  const confirmed = window.confirm(
+    isParent
+      ? `Delete parent profile "${profile.name}" and all nested projects?`
+      : `Delete project "${profile.name}"?`,
+  );
+  if (!confirmed) return;
+
+  state.profiles = state.profiles.filter((candidate) => !profilesToDelete.includes(candidate.id));
+
+  if (includesActive) {
+    const fallbackParent = state.profiles.find((candidate) => !candidate.parentProfileId);
+    state.activeProfileId = fallbackParent ? fallbackParent.id : defaultState.activeProfileId;
+  }
+
+  persistAndRender();
+}
+
+function collectProfileIds(rootId) {
+  const ids = [rootId];
+  for (let index = 0; index < ids.length; index += 1) {
+    const current = ids[index];
+    state.profiles
+      .filter((candidate) => candidate.parentProfileId === current)
+      .forEach((candidate) => ids.push(candidate.id));
+  }
+  return ids;
+}
+
 function profileLineage(profile) {
   const lineage = [];
   let cursor = profile;
@@ -711,3 +866,4 @@ function persistAndRender() {
   saveState();
   render();
 }
+
